@@ -1,0 +1,8 @@
+<!--  <?xml version="1.0" encoding="UTF-8"?>
+create table admin(
+    admin_no    int
+    ,admin_id   varchar2(20) not null unique
+    ,pwd        varchar2(20) not null
+    ,primary key(admin_no)
+);
+insert  into admin values(1,'abc','123');-->

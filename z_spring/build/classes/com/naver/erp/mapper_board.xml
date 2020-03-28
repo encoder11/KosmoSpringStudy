@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<!--mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm-->
+<!-- mapper 태그 선언 -->
+<!--mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm-->
+	<!-- namespace 속성값으로 [DAO 인터페이스명]이 오며 -->
+	<!-- [DAO 인터페이스] 메소드명과 동일한 id 값을 소유한 태그를 내포하고 있다. -->
+<!--mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm-->
+<mapper namespace="com.naver.erp.BoardDAO">
+
+	<!-- 게시판 글 목록 구하는 조건문 설정 -->
+	<sql id="boardWhere">
+			<!-- 만약 키워드가 있으면 키워드가 where 절에 참여하기 -->
+			<!-- BoardSearchDTO 객체안의 keyword1 속성변수 안의 데이터를 mysbatis 문법으로 ${keyword1}형식으로 표현한다. -->
+			<!-- $을 붙여 꺼내면 ''없이 원본대로 그냥 나오고 #을 붙여 꺼내면 문자열일경우 ''가 자동을 붙어나온다 -->
+			<!-- 현재 아래 SQL구문에서는 ''없이 나와야함으로 $표시를 사용한다 -->
+			<!--
+			만약 Keyword1이 있고 Keyword2가 없으면
+			String객체가 들어올시 null먼저 확인해야 한다(만약 null값이 들어왔을때 메소드를 호출할수가없다)
+			<if test="(keyword1!=null and keyword1.length()>0) and (keyword2==null and keyword2.length()==0)">
+				and(
+               upper(subject) like upper('%${keyword1}%')
+               or upper(writer) like upper('%${keyword1}%')
+               or upper(content) like upper('%${keyword1}%')
+               or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword1}%')
+               or upper(email) like upper('%${keyword1}%')
+            	)
+			</if>
+			만약 Keyword2가 있고 Keyword1이 없으면
+			<if test="(keyword2!=null and keyword2.length()>0) and (keyword1==null and keyword1.length()==0)">
+				and(
+               upper(subject) like upper('%${keyword2}%')
+               or upper(writer) like upper('%${keyword2}%')
+               or upper(content) like upper('%${keyword2}%')
+               or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword2}%')
+               or upper(email) like upper('%${keyword2}%')
+            	)
+			</if>
+			만약 Keyword1이 있고 Keyword2도 있으면
+			<if test="(keyword1!=null and keyword1.length()>0) and (keyword2!=null and keyword2.length()>0)">
+				and((
+               upper(subject) like upper('%${keyword1}%')
+               or upper(writer) like upper('%${keyword1}%')
+               or upper(content) like upper('%${keyword1}%')
+               or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword1}%')
+               or upper(email) like upper('%${keyword1}%')
+            	)
+				${orAnd}
+				(
+               upper(subject) like upper('%${keyword2}%')
+               or upper(writer) like upper('%${keyword2}%')
+               or upper(content) like upper('%${keyword2}%')
+               or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword2}%')
+               or upper(email) like upper('%${keyword2}%')
+            	))
+			</if>
+			  -->
+		
+			<!-- 만약 Keyword1이 있거나 Keyword2가 있으면 -->
+			<if test="(keyword1!=null and keyword1.length()>0) or (keyword2!=null and keyword2.length()>0)">
+				and(
+			</if>
+			<!-- 만약 Keyword1이 있으면 -->
+			<if test="(keyword1!=null and keyword1.length()>0)">
+				(
+               upper(subject) like upper('%${keyword1}%')
+               or upper(writer) like upper('%${keyword1}%')
+               or upper(content) like upper('%${keyword1}%')
+               or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword1}%')
+               or upper(email) like upper('%${keyword1}%')
+            	)
+			</if>
+			<!-- 만약 Keyword1이 있고 Keyword2도 있으면 -->
+			<!-- BoardSearchDTO 객체안의 orAnd라는 속성변수 안의 데이터를 싱글쿼트 없이 그냥 꺼내서 출력하라 -->
+			<if test="(keyword1!=null and keyword1.length()>0) and (keyword2!=null and keyword2.length()>0)">
+				${orAnd}
+			</if>
+			<!-- 만약 Keyword2가 있으면 -->
+			<if test="(keyword2!=null and keyword2.length()>0)">
+				(
+               upper(subject) like upper('%${keyword2}%')
+               or upper(writer) like upper('%${keyword2}%')
+               or upper(content) like upper('%${keyword2}%')
+               or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword2}%')
+               or upper(email) like upper('%${keyword2}%')
+            	)
+			</if>
+			<!-- 만약 Keyword1이 있거나 Keyword2가 있으면 -->
+			<if test="(keyword1!=null and keyword1.length()>0) or (keyword2!=null and keyword2.length()>0)">
+				)
+			</if>
+			
+			
+			
+			
+			
+			<!-- 만약 BoardSerachDTO 객체의 속성변수 date가 null이 아니고 배열변수의 개수가 0보다 크면 -->
+			<!-- [주의] 체크박스 값이 저장되는 배열변수는 배열 객체는 있되 배열변수가 없을 수 있으므로 배열변수의 개수도 0 보다 큰지 확인한다. -->
+			<if test="date!=null and date.length>0">
+				and
+				<!-- mybatis foreach반복문 속성 설명 -->
+				<!-- 
+					collection = 배열/List객체의 속성변수명
+					item = 배열 or List객체 안의 데이터를 저장할 지역변수명
+					open = 반복문 시작 전 삽입할 문자
+					close = 반복문 끝난 후 삽입할 문자
+					separator = 반복문에 의해 표현되는 쿼리문 사이사이에 삽입될 쿼리의 일부분
+					
+					index = 반복문안에서 사용할 인덱스 번호 저장 변수명
+				 -->
+				<foreach collection="date" item="date" open="(" separator="or" close=")">
+					<if test="date.equals('오늘')">
+						to_char(sysdate, 'YYYYMMDD') = to_char(reg_date, 'YYYYMMDD')
+					</if>
+					<if test="date.equals('어제')">
+						to_char(sysdate-1, 'YYYYMMDD') = to_char(reg_date, 'YYYYMMDD')
+					</if>
+					<if test="date.equals('이번달')">
+						to_char(sysdate, 'YYYYMM') = to_char(reg_date, 'YYYYMM')
+					</if>
+					<if test="date.equals('이번달이외')">
+						to_char(sysdate, 'YYYYMM') != to_char(reg_date, 'YYYYMM')
+					</if>
+				</foreach>
+			</if>
+			<if test="readcnt!=null and readcnt.length>0">
+				and
+				<foreach collection="readcnt" item="readcnt" open="(" separator="or" close=")">
+					<if test="readcnt.equals('조회수100이상')">
+						<![CDATA[ readcount>=100 ]]>
+					</if>
+				</foreach>
+			</if> 
+	</sql>
+	
+	<!-- 태그 안에 있는 id값은 BoardDAO안의 메소드 이름과 일치해야 한다. -->
+	<!--**************************************************************************-->
+	<!-- 게시판 검색하는 select 문을 내포한 select 태그 선언 -->
+	<!--**************************************************************************-->
+	<select id="getBoardList" parameterType="com.naver.erp.BoardSearchDTO" resultType="java.util.HashMap">
+		select * from(select zzz.*, rownum RNUM from(
+			select
+				b_no||'' 		as "b_no"
+				,subject 		as "subject"
+				,writer 		as "writer"
+				,to_char(reg_date,'YYYY-MM-DD') as "reg_date" 
+				,readcount||''  as "readcount"
+				,content 		as "content"
+				,pwd 			as "pwd"
+				,email 			as "email"
+				,group_no||'' 	as "group_no"
+				,print_no||'' 	as "print_no"
+				,print_level||'' as "print_level"
+			from board
+			where 1=1
+			<!-- <sql id="boardWhere"> 태그 안의 삽입된 SQL구문 삽입하기 -->
+			<include refid="boardWhere" />
+			
+			order by group_no desc, print_no asc
+		) zzz ) where <![CDATA[ RNUM>=${selectPageNo*rowCntPerPage-rowCntPerPage+1} and RNUM<=${selectPageNo*rowCntPerPage} ]]>
+	</select>
+	
+	<!--*************************************************************-->
+	<!-- 게시판 글 목록 총 개수 구하는  select 태그 선언-->
+	<!--*************************************************************-->
+	<select id="getBoardListAllCnt" parameterType="com.naver.erp.BoardSearchDTO" resultType="int">
+		select count(*) from board where 1=1 
+			<!-- <sql id="boardWhere"> 태그 안의 삽입된 SQL구문 삽입하기 -->
+			<include refid="boardWhere" />
+	</select>
+	<!-- 
+	<update id="reInsertBoard" parameterType="com.naver.erp.BoardDTO">
+		insert into board(b_no, subject, writer, readcount, content, pwd, email, group_no, print_no, print_level)
+		values( (select nvl(max(b_no),0)+1 from board), #{subject}, #{writer}, #{readcount}, #{content}, #{pwd}, #{email},
+				(select group_no from board where b_no=#{b_no})
+				, (select print_no+1 from board where b_no=#{b_no})
+				, (select print_level+1 from board where b_no=#{b_no})
+				)
+	</update>
+	 -->
+	<insert id="insertBoard" parameterType="com.naver.erp.BoardDTO">
+		insert into board(b_no, subject, writer, readcount, content, pwd, email, group_no, print_no, print_level)
+		values( (select nvl(max(b_no),0)+1 from board), #{subject}, #{writer}, #{readcount}, #{content}, #{pwd}, #{email}
+				<if test="b_no==0">
+				,(select nvl(max(b_no),0)+1 from board)
+				, 0
+				, 0
+				</if>
+				<if test="b_no>0">
+				,(select group_no from board where b_no=#{b_no})
+				, (select print_no+1 from board where b_no=#{b_no})
+				, (select print_level+1 from board where b_no=#{b_no})
+				</if>
+				)
+	</insert>
+	
+	<!-- [게시판  글 조회수 증가]하는 update 태그 선언 -->
+	<update id="updateReadcount" parameterType="int">
+		update board set readcount=readcount+1 where b_no=#{b_no}
+	</update>
+	
+	<!-- 개시판 1개 글 검색하는 select문을 내포한 select태그 선언 -->
+		<!-- 만약 parameterType이 int,String,double 같이 한개일 경우 SQL 구문 안에서 표현하는 방법은 #{마음대로} or $이다 -->
+	<select id="getBoardDTO" parameterType="int" resultType="com.naver.erp.BoardDTO">
+		select
+				b_no	 		as "b_no"
+				,subject 		as "subject"
+				,writer 		as "writer"
+				,reg_date	 	as "reg_date" 
+				,readcount		as "readcount"
+				,content 		as "content"
+				,pwd 			as "pwd"
+				,email 			as "email"
+				,group_no	 	as "group_no"
+				,print_no	 	as "print_no"
+				,print_level	as "print_level"
+			from board board where b_no=#{b_no}
+	</select>
+	<delete id="deleteBoard" parameterType="com.naver.erp.BoardDTO">
+		delete from board where b_no=#{b_no} and pwd=#{pwd}
+	</delete>
+	
+	<update id="updateBoard" parameterType="com.naver.erp.BoardDTO">
+		update board set subject=#{subject}, writer=#{writer}, content=#{content}, email=#{email} where b_no=#{b_no} and pwd=#{pwd}
+	</update>
+	
+	<select id="getBoardCnt" parameterType="com.naver.erp.BoardDTO" resultType="int">
+		select count(*) from board where b_no=#{b_no}
+	</select>
+	
+	<select id="getPwdCnt" parameterType="com.naver.erp.BoardDTO" resultType="int">
+		select count(*) from board where b_no=#{b_no} and pwd=#{pwd}
+	</select>
+	
+	<select id="getSonCnt" parameterType="com.naver.erp.BoardDTO" resultType="int">
+		select count(*) from board
+			where group_no=(select group_no from board where b_no=#{b_no})
+ 			and print_level=(select print_level+1 from board where b_no=#{b_no})
+ 			and print_no=(select print_no+1 from board where b_no=#{b_no})
+	</select>
+	
+	<update id="downPrintNo" parameterType="com.naver.erp.BoardDTO">
+		update board set print_no=print_no-1
+		where group_no=(select group_no from board where b_no=#{b_no})
+			and print_no &gt; (select print_no from board where b_no=#{b_no})
+	</update>
+	
+	<update id="updatePrintNo" parameterType="com.naver.erp.BoardDTO">
+		update board set print_no=print_no+1
+		where group_no=(select group_no from board where b_no=#{b_no})
+			and print_no &gt; (select print_no from board where b_no=#{b_no})
+	</update>
+</mapper>	
+	

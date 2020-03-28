@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<!-- mapper 태그 선언 -->
+	<!-- namespace 속성값으로 [DAO 인터페이스명]이 오며 -->
+	<!-- [DAO 인터페이스] 메소드명과 동일한 id 값을 소유한 태그를 내포하고 있다. -->
+
+<mapper namespace="com.naver.erp.ContactDAO">
+	
+	<sql id="contactWhere">
+			<if test="(keyword1!=null and keyword1.length()>0) or (keyword2!=null and keyword2.length()>0)">
+				and(
+			</if>
+			<!-- 만약 Keyword1이 있으면 -->
+			<if test="(keyword1!=null and keyword1.length()>0)">
+				(
+              upper(contact_name) like upper('%${keyword1}%')
+              or upper(phone) like upper('%${keyword1}%')
+              or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword1}%')
+              or upper((select substr(xmlagg(xmlelement(x,',',cdb.business_area_name)).extract('//text()'),2) from code_business_area cdb, contact_business_area cb
+					where cdb.business_area_code=cb.business_area_code and c.contact_no=cb.contact_no )) like upper('%${keyword1}%')
+           	)
+			</if>
+			<!-- 만약 Keyword1이 있고 Keyword2도 있으면 -->
+			<!-- BoardSearchDTO 객체안의 orAnd라는 속성변수 안의 데이터를 싱글쿼트 없이 그냥 꺼내서 출력하라 -->
+			<if test="(keyword1!=null and keyword1.length()>0) and (keyword2!=null and keyword2.length()>0)">
+				${orAnd}
+			</if>
+			<!-- 만약 Keyword2가 있으면 -->
+			<if test="(keyword2!=null and keyword2.length()>0)">
+				(
+              upper(contact_name) like upper('%${keyword2}%')
+              or upper(phone) like upper('%${keyword2}%')
+              or upper(to_char(reg_date,'yyyy-mm-dd am hh:mi:ss')) like upper('%${keyword2}%')
+              or upper((select substr(xmlagg(xmlelement(x,',',cdb.business_area_name)).extract('//text()'),2) from code_business_area cdb, contact_business_area cb
+					where cdb.business_area_code=cb.business_area_code and c.contact_no=cb.contact_no )) like upper('%${keyword2}%')
+           	)
+			</if>
+			<!-- 만약 Keyword1이 있거나 Keyword2가 있으면 -->
+			<if test="(keyword1!=null and keyword1.length()>0) or (keyword2!=null and keyword2.length()>0)">
+				)
+			</if>
+			
+			<if test="(front_year!=null and front_year.length()>0) and (front_month!=null and front_month.length()>0)">
+				and ( to_number(to_char(reg_date, 'YYYYMM')) &gt;= #{front_year}||''||#{front_month} )
+			</if>
+			<if test="(back_year!=null and back_year.length()>0) and (back_month!=null and back_month.length()>0)">
+				and ( to_number(to_char(reg_date, 'YYYYMM')) &lt;= #{back_year}||''||#{back_month} )
+			</if>
+			
+			<if test="searchSkills!=null and searchSkills.length>0">
+				and
+				<foreach collection="searchSkills" item="skills" open="(" separator="and" close=")">
+					(select substr(xmlagg(xmlelement(x,',',cdb.business_area_name)).extract('//text()'),2) from code_business_area cdb, contact_business_area cb
+					where cdb.business_area_code=cb.business_area_code and c.contact_no=cb.contact_no ) like '%${skills}%'
+				</foreach>
+			</if>
+			
+	</sql>
+	
+	<select id='getcontactList' parameterType="com.naver.erp.ContactSearchDTO" resultType="java.util.HashMap">
+		select * from(select zzz.*, rownum RNUM from(
+			select
+				c.contact_no||'' 		as "contact_no"
+				,c.contact_name 		as "contact_name"
+				,c.phone 		as "phone"
+				,(select substr(xmlagg(xmlelement(x,',',cdb.business_area_name)).extract('//text()'),2) from code_business_area cdb, contact_business_area cb
+					where cdb.business_area_code=cb.business_area_code and c.contact_no=cb.contact_no )
+				as "using_skill"
+				,c.reg_date				as "reg_date"
+			from contact c
+			where 1=1
+				<include refid="contactWhere" />
+			order by c.contact_no desc
+			) zzz ) where <![CDATA[ RNUM>=${selectPageNo*rowCntPerPage-rowCntPerPage+1} and RNUM<=${selectPageNo*rowCntPerPage} ]]>
+	</select>
+	<select id="getContactListAllCnt" parameterType="com.naver.erp.ContactSearchDTO" resultType="int">
+		select count(*) from contact c where 1=1 <include refid="contactWhere" />
+
+	</select>
+	<insert id="insertContact" parameterType="com.naver.erp.ContactDTO">
+		insert into contact(contact_no, contact_name, phone, reg_date)
+		values(
+			(select nvl(max(contact_no),0)+1 from contact)
+			,#{contact_name}
+			,#{phone}
+			,sysdate
+		)
+	</insert>
+
+	<insert id="insertSkills" parameterType="com.naver.erp.ContactDTO">
+		insert into contact_business_area
+			<foreach collection="skills" item="skills" separator="union" >
+				select
+				(select contact_no from contact where contact_name=#{contact_name})
+				,(select business_area_code from code_business_area where business_area_name=#{skills})
+				from dual
+			</foreach>
+	</insert>
+	
+	<delete id="getDelCnt" parameterType="com.naver.erp.ContactDTO">
+		delete from contact where contact_no=#{contact_no}
+	</delete>
+	
+	<update id="getUpCnt" parameterType="com.naver.erp.ContactDTO">
+		update contact set 
+	</update>
+</mapper>
+	

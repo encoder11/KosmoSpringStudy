@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+       
+ update board set reg_date=sysdate where b_no>=80;
+ 
+ update board set reg_date=(sysdate-1) where b_no>=41 and b_no<80;   
+ 
+ update board set reg_date=(sysdate-10) where b_no>=1 and b_no<41; -->
